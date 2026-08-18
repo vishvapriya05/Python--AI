@@ -1,5 +1,5 @@
 import os, re, urllib.parse, urllib.request
-from flask import Flask, abort, jsonify, render_template, request 
+from flask import Flask, abort, jsonify, render_template, request
 
 app = Flask(__name__)
 
@@ -20,8 +20,8 @@ def home():
 
 @app.route("/agent", methods=["POST"])
 def ai_agent_router():
-    d = request.get__json(silent=True)
-    if not d or ("command" not in d and "text_command"not in d):
+    d = request.get_json(silent=True)
+    if not d or ("command" not in d and "text_command" not in d):
         abort(400)
 
     cmd_raw = d.get("command") or d.get("text_command")
@@ -31,9 +31,10 @@ def ai_agent_router():
         q = cmd
         patterns = [
             "open youtube and search",
-            "open yotube and play",
+            "open youtube and play",
             "open youtube",
             "and play",
+            "play",
             "on youtube"
         ]
         for p in patterns:
@@ -42,28 +43,30 @@ def ai_agent_router():
         vid = get_vid(q)
         if vid:
             target = f"https://www.youtube.com/embed/{vid}?autoplay=1&mute=1"
-            msg = f"playing{q}"
-    elif any(k in cmd for k in ["gmail", "email", "mail","message"]):
-        to, body = "",""
+            msg = f"Playing {q}"
+
+    elif any(k in cmd for k in ["gmail", "email", "mail", "message"]):
+        to, body = "", ""
         clean_cmd = re.sub(
-            r'^(please\s+)?(open\s+)?(gmail|email|mail|message|)\s*',
+            r'^(please\s+)?(open\s+)?(gmail|email|mail|message)\s*',
             '',
             cmd
         ).strip()
-        clean_cmd = re.sub(r'\b(com(and|mand)?)\b', 'com',clean_cmd)
+
+        clean_cmd = re.sub(r'\b(com(and|mand)?)\b', 'com', clean_cmd)
 
         parts = re.split(r'\b(type|write|saying|message|content|with body)\b', clean_cmd)
         recip_part = parts[0].strip()
 
-        recip_part = re.sub(r'^(update\s+to|send\s+to|and\s+update\s+to)\s*', '' recip_part).strip()
-        
+        recip_part = re.sub(r'^(update\s+to|to|send\s+to|and\s+update\s+to)\s*', '', recip_part).strip()
+
         if len(parts) > 1:
             body = parts[-1].strip()
 
         if recip_part:
-            c = recip_part.replace("at", "@").replace("dot",".").replace(" ", "")
-            c = re.sub(r'[^a-zA-z0-9@._%-])', '', c)
-            to = c if "@"in c else f"{c}@gamil.com"
+            c = recip_part.replace(" at ", "@").replace(" dot ", ".").replace(" ", "")
+            c = re.sub(r'[^a-zA-Z0-9@._%-]', '', c)
+            to = c if "@" in c else f"{c}@gmail.com"
 
         base = "https://mail.google.com/mail/u/0/?view=cm&fs=1"
         params = urllib.parse.urlencode({"to": to, "body": body})
@@ -76,8 +79,5 @@ def ai_agent_router():
         "url": target
     })
 
-    if __name__=="__main__":
-        app.run(host="0.0.0.0",port=int(os.environ.get("PORT",8000)))
-
-
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
